@@ -1,0 +1,19 @@
+# Python virtual environment
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Large raw Kaggle data files
+train_transaction.csv
+train_identity.csv
+
+# Other large generated data files
+transactions_large.csv
+transactions_ledger.csv
+
+# Generated report files
+# This ignores the contents inside the reports/ folder and individual reports
+reports/*
+fraud_report.csv

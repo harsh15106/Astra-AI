@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Astra AI | Fraud Forensics</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --background: #121212;
+            --surface: #1E1E1E;
+            --primary: #BB86FC;
+            --secondary: #03DAC6;
+            --on-background: #EAEAEA;
+            --on-surface-medium: #A0A0A0;
+            --error: #CF6679;
+            --success: #66CF97;
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background);
+            color: var(--on-background);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: var(--surface);
+            border-radius: 12px;
+            padding: 2rem 3rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--on-background);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        h1 i {
+            color: var(--primary);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--on-surface-medium);
+            margin-bottom: 2.5rem;
+            line-height: 1.6;
+        }
+
+        .upload-box {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 2.5rem;
+            border: 2px dashed #444;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #upload-form {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        #csv-file {
+            display: none;
+        }
+
+        .file-input-label {
+            background-color: #333;
+            color: var(--on-surface-medium);
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            background-color: #444;
+            color: var(--on-background);
+        }
+
+        .file-name {
+            color: var(--secondary);
+            font-weight: 500;
+        }
+
+        button[type="submit"] {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: black;
+            font-family: var(--font-family);
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3);
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .kpi-card,
+        .chart-card {
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .kpi-card h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: var(--on-surface-medium);
+            text-transform: uppercase;
+        }
+
+        .kpi-card .value {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--secondary);
+            margin-top: 0.5rem;
+        }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .chart-card {
+            grid-column: span 2;
+        }
+
+        .chart-card h3 {
+            margin-top: 0;
+            text-align: center;
+            color: var(--on-surface-medium);
+        }
+
+        @media (min-width: 992px) {
+            .chart-card {
+                grid-column: span 1;
+            }
+        }
+
+        #spinner {
+            display: none;
+            margin: 2rem auto;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #444;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .results-container {
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .results-container.visible {
+            opacity: 1;
+        }
+
+        .summary {
+            text-align: center;
+            font-size: 1.1rem;
+            margin: 2rem 0;
+            line-height: 1.8;
+        }
+
+        .summary span {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-top: 1rem;
+            text-decoration: none;
+            background-color: var(--success);
+            color: var(--background);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin-top: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #444;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--on-surface-medium);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .risk-high {
+            font-weight: 600;
+            color: var(--error);
+        }
+
+        .reason-cell {
+            font-size: 0.9rem;
+            color: var(--on-surface-medium);
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem 0.5rem;
+            }
+
+            .container {
+                padding: 1.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .subtitle {
+                font-size: 0.9rem;
+            }
+
+            #upload-form {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .file-name {
+                text-align: center;
+            }
+
+            button[type="submit"] {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-card {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1><i class="fas fa-shield-alt"></i> Astra AI Fraud Forensics</h1>
+        <p class="subtitle">Upload a transaction ledger to identify suspicious activities using our AI model.</p>
+
+        <div class="upload-box">
+            <form id="upload-form">
+                <input type="file" id="csv-file" accept=".csv" required>
+                <label for="csv-file" class="file-input-label">
+                    <i class="fas fa-file-csv"></i> Choose a File
+                </label>
+                <span id="file-name" class="file-name">No file chosen</span>
+                <button type="submit"><i class="fas fa-search"></i> Analyze File</button>
+            </form>
+        </div>
+
+        <div id="spinner"></div>
+
+        <div id="results-container" class="results-container">
+            <div id="dashboard-section">
+                <div class="dashboard" id="kpi-dashboard"></div>
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <h3>Fraud by Card Type</h3>
+                        <canvas id="cardTypeChart"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Fraud by Product Code</h3>
+                        <canvas id="productCodeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div id="summary-info"></div>
+            <div id="results-table" class="table-wrapper"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('csv-file');
+        const fileNameSpan = document.getElementById('file-name');
+        const kpiDiv = document.getElementById('kpi-dashboard');
+        const summaryDiv = document.getElementById('summary-info');
+        const resultsTableDiv = document.getElementById('results-table');
+        const spinner = document.getElementById('spinner');
+        const resultsContainer = document.getElementById('results-container');
+        let cardChart, productChart;
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileNameSpan.textContent = fileInput.files[0].name;
+            } else {
+                fileNameSpan.textContent = 'No file chosen';
+            }
+        });
+
+        function createBarChart(canvasId, chartInstance, labels, data, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+            return new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: 'rgba(187, 134, 252, 0.5)',
+                        borderColor: 'rgba(187, 134, 252, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: 'white', stepSize: 1 } },
+                        x: { ticks: { color: 'white' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateKpis(data) {
+            const fraudRate = data.total_transactions > 0 ? (data.suspicious_count / data.total_transactions) * 100 : 0;
+            const totalFraudAmount = data.dashboard_data.total_fraud_amount || 0;
+            kpiDiv.innerHTML = `
+                <div class="kpi-card">
+                    <h3>Scanned</h3>
+                    <div class="value">${data.total_transactions.toLocaleString()}</div>
+                </div>
+                <div class="kpi-card">
+                    <h3>Suspicious</h3>
+                    <div class="value">${data.suspicious_count.toLocaleString()}</div>
+                </div>
+                <div class="kpi-card">
+                    <h3>Fraud Rate</h3>
+                    <div class="value">${fraudRate.toFixed(2)}%</div>
+                </div>
+                <div class="kpi-card">
+                    <h3>Fraud Amount</h3>
+                    <div class="value">₹ ${Math.round(totalFraudAmount).toLocaleString('en-IN')}</div>
+                </div>
+            `;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            kpiDiv.innerHTML = '';
+            summaryDiv.innerHTML = '';
+            resultsTableDiv.innerHTML = '';
+            resultsContainer.classList.remove('visible');
+            spinner.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', document.getElementById('csv-file').files[0]);
+
+            try {
+                const response = await fetch('/analyze_batch', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                spinner.style.display = 'none';
+                resultsContainer.classList.add('visible');
+
+                updateKpis(data);
+
+                if (data.suspicious_count > 0 && data.dashboard_data) {
+                    const cardData = data.dashboard_data.fraud_by_card_type;
+                    cardChart = createBarChart('cardTypeChart', cardChart, Object.keys(cardData), Object.values(cardData), '# of Transactions');
+
+                    const productData = data.dashboard_data.fraud_by_product_code;
+                    productChart = createBarChart('productCodeChart', productChart, Object.keys(productData), Object.values(productData), '# of Transactions');
+                }
+
+                let summaryHTML = `<div class="summary"><p>Displaying the Top ${data.suspicious_transactions.length} suspicious transactions.</p></div>`;
+                if (data.download_link) {
+                    summaryHTML = `<div class="summary"><p>Displaying the Top ${data.suspicious_transactions.length} of ${data.suspicious_count.toLocaleString()} suspicious transactions.</p><a href="${data.download_link}" class="download-link" download><i class="fas fa-file-csv"></i> Download Full Report</a></div>`;
+                }
+                summaryDiv.innerHTML = summaryHTML;
+
+                if (data.suspicious_count === 0) return;
+
+                let tableHTML = `<table>
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Amount</th>
+                            <th>Risk Score</th>
+                            <th>Key Factors</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+                data.suspicious_transactions.forEach(row => {
+                    const transactionId = row.TransactionID;
+                    const transactionAmt = row.TransactionAmt;
+                    const cardType = row.card4 || 'N/A';
+                    const cardMethod = row.card6 || 'N/A';
+                    const email = row.P_emaildomain || 'N/A';
+                    const reasonString = `Card: ${cardType}/${cardMethod}, Email: ${email}`;
+
+                    tableHTML += `<tr>
+                        <td>${transactionId}</td>
+                        <td>₹ ${transactionAmt.toLocaleString('en-IN')}</td>
+                        <td class="risk-high">${(row.risk_score * 100).toFixed(1)}%</td>
+                        <td class="reason-cell">${reasonString}</td>
+                    </tr>`;
+                });
+                tableHTML += '</tbody></table>';
+                resultsTableDiv.innerHTML = tableHTML;
+
+            } catch (error) {
+                spinner.style.display = 'none';
+                resultsContainer.classList.add('visible');
+                summaryDiv.innerHTML = `<p class="summary" style="color: ${getComputedStyle(document.documentElement).getPropertyValue('--error')};">Error processing file. Please check the server.</p>`;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>
