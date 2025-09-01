@@ -1,6 +1,5 @@
-# main.py - Final version with dashboard data generation
+# main.py - Faster version that loads a pre-trained model
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import FileResponse 
@@ -9,8 +8,9 @@ import io
 import numpy as np
 import os
 import time
+import joblib # Import joblib to load the model
 
-# --- Part 1: Train the Model on Startup ---
+# --- Part 1: Load the Pre-trained AI Model on Startup ---
 print("--- Initializing AI Engine ---")
 
 # Define directory paths
@@ -21,19 +21,16 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 os.makedirs(STATIC_DIR, exist_ok=True)
 
 try:
-    print("Loading the prepared training dataset...")
-    df_train = pd.read_csv('fraud_training_prepared.csv')
+    # Load the model and columns from the files created by train_model.py
+    print("Loading pre-trained model...")
+    model = joblib.load("fraud_model.joblib")
+    MODEL_COLUMNS = joblib.load("model_columns.pkl")
+    print("Model loaded successfully.")
 except FileNotFoundError:
-    print("FATAL ERROR: 'fraud_training_prepared.csv' not found.")
-    print("Please run the 'prepare_data.py' script first.")
+    print("FATAL ERROR: Model files not found ('fraud_model.joblib', 'model_columns.pkl').")
+    print("Please run the 'train_model.py' script first to create them.")
     exit()
 
-print("Training the master AI model...")
-X_train = df_train.drop('isFraud', axis=1)
-y_train = df_train['isFraud']
-MODEL_COLUMNS = X_train.columns
-model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-model.fit(X_train, y_train)
 print("--- AI Engine Ready ---")
 
 
@@ -94,7 +91,7 @@ async def analyze_batch(file: UploadFile = File(...)):
     print(f"Analysis complete. Found {len(fraudulent_transactions)} suspicious transactions.")
     
     download_link = None
-    dashboard_data = {} # Initialize dashboard data dictionary
+    dashboard_data = {} 
     if not fraudulent_transactions.empty:
         timestamp = int(time.time())
         report_filename = f"fraud_report_{timestamp}.csv"
@@ -103,7 +100,6 @@ async def analyze_batch(file: UploadFile = File(...)):
         print(f"Full report saved to {report_path}")
         download_link = f"/reports/{report_filename}"
 
-        # --- NEW: Generate data for the dashboard ---
         dashboard_data = {
             "total_fraud_amount": fraudulent_transactions['TransactionAmt'].sum(),
             "fraud_by_card_type": fraudulent_transactions['card4'].value_counts().to_dict(),
@@ -119,7 +115,7 @@ async def analyze_batch(file: UploadFile = File(...)):
         "suspicious_count": len(fraudulent_transactions),
         "suspicious_transactions": results_df.to_dict('records'),
         "download_link": download_link,
-        "dashboard_data": dashboard_data # Add the new dashboard data to the response
+        "dashboard_data": dashboard_data
     }
 
 # --- Part 4: Serve Static Files and Frontend ---
